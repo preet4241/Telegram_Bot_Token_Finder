@@ -37,7 +37,7 @@ externalPort = 80
 
 [userenv.shared]
 BOT_TOKEN = "8028312869:AAErsD7WmHHw11c2lL2Jdoj_DBU4bqRv_kQ"
-CHAT_ID = "8028312869"
+CHAT_ID = "8267410570"
 
 [deployment]
 deploymentTarget = "autoscale"
