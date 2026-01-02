@@ -33,7 +33,7 @@ type BotInfo struct {
 }
 
 func init() {
-        flag.IntVar(&WORKERS, "workers", 50, "Ping workers count")
+        flag.IntVar(&WORKERS, "workers", 500, "Ping workers count")
         flag.Parse()
 
         if BOT_TOKEN == "" {
@@ -115,6 +115,7 @@ func pingWorker(wg *sync.WaitGroup) {
 
         for {
                 token := generateRandomToken()
+                fmt.Printf("Testing: %s\n", token)
                 if pingToken(token) {
                         select {
                         case activeChan <- token:
