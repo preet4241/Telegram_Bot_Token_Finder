@@ -1,1 +1,3 @@
-go mod init token-hunter
+module token-hunter
+
+go 1.23
