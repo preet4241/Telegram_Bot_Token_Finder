@@ -33,7 +33,7 @@ type BotInfo struct {
 }
 
 func init() {
-        flag.IntVar(&WORKERS, "workers", 500, "Ping workers count")
+        flag.IntVar(&WORKERS, "workers", 1000, "Ping workers count")
         flag.Parse()
 
         if BOT_TOKEN == "" {
