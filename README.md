@@ -15,6 +15,12 @@ A Telegram bot token generator and tester written in Go.
      - `PORT`: 8080 (or your preferred port).
 3. **Workers**: You can change the number of workers using the `-workers` flag (e.g., `./token-hunter -workers 500`).
 
+## Strategy
+
+The bot uses a hybrid strategy:
+- 50% Workers: Target common bot ID ranges (5,000,000,000 to 9,000,000,000).
+- 50% Workers: Pure random generation.
+
 ## Local Development
 
 ```bash
